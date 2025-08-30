@@ -101,17 +101,20 @@ def embedding_vector_store(translated_text):
         chunks = text_splitter(translated_text, CHUNK_SIZE, CHUNK_OVERLAP)
         embedding_fun = HuggingFaceEmbeddings(model=EMBEDDING_MODEL)
         vector_store = FAISS.from_documents(chunks, embedding_fun)
+        return vector_store
 
 def process_video(url: str):
     """Full pipeline for ingesting YouTube video into vector store."""
+    global vector_store
+    initialize_llm()
+    vector_store = None  # Reset previous vector store
     video_id = extract_youtube_id(url)
     if video_id:
         initialize_llm()
         transcript, language = fetch_youtube_transcript(video_id)
-        vector_store = embedding_vector_store(transcript)
+        embedding_vector_store(transcript)
         print("Transcript processed and stored ✅")
-        return vector_store
-    
+        return language
 
 def call_llm(text):
     # llm is your global ChatOpenAI instance
@@ -146,8 +149,8 @@ def generate_answer_chain(query: str):
     return answer
 
 
-if __name__ == "__main__":
-    url = "https://www.youtube.com/watch?v=ZCSsIkyCZk4"
-    process_video(url)
+# if __name__ == "__main__":
+#     url = "https://www.youtube.com/watch?v=ZCSsIkyCZk4"
+#     process_video(url)
 
-    generate_answer_chain("What is FAISS Vector")
+#     generate_answer_chain("What is FAISS Vector")
