@@ -1,10 +1,8 @@
-
-import re
 from urllib.parse import urlparse, parse_qs
 import time
 from deep_translator import GoogleTranslator, MyMemoryTranslator
 from youtube_transcript_api import NoTranscriptFound, YouTubeTranscriptApi
-import time
+
 
 def batch_translate(text, source_lang, target_lang="en", max_chunk_size=1000, retries=3):
     """
@@ -55,15 +53,16 @@ def extract_youtube_id(url: str) -> str:
     
     # Case 2: Shortened youtu.be link
     if parsed_url.hostname == "youtu.be":
-        print('parsed_url.path', parsed_url.path)
         return parsed_url.path[1:]  # skip leading '/'
     
     return None
 
+def format_docs(retrieved_docs):
+    """Convert retrieved docs into a single context string."""
+    return "\n\n".join(doc.page_content for doc in retrieved_docs)
 
 
-from deep_translator import GoogleTranslator
-import time
+
 
 def batch_translate(text, source_lang, target_lang, max_chunk_size=4000):
     """
@@ -92,55 +91,3 @@ def batch_translate(text, source_lang, target_lang, max_chunk_size=4000):
 
 
 
-def fetch_youtube_transcript(video_id: str, target_lang="en") -> str:
-    """
-    Fetch the transcript of a YouTube video in English.
-    - Checks if transcript is available
-    - Lists available languages
-    - Translates to English if needed
-    Returns: List of transcript snippets [{'text': ..., 'start': ..., 'duration': ...}, ...]
-    """
-
-    ytt_api = YouTubeTranscriptApi()
-
-    try:
-        transcript_list = ytt_api.list(video_id)
-    except NoTranscriptFound:
-        print("❌ No transcript available for this video")
-        return None
-    
-    # Print available languages
-    print("Available transcripts for this video:")
-    for transcript in transcript_list:
-        print(
-            f"- Language: {transcript.language} ({transcript.language_code}) | "
-            f"Generated: {transcript.is_generated} | "
-            f"Translatable: {transcript.is_translatable}"
-        )
-
-    # Try to find English transcript first
-    try:
-        transcript = transcript_list.find_transcript(['en'])
-        print("\n✅ English transcript found.")
-        fetched = transcript.fetch()
-        return fetched.to_raw_data()
-    except:
-        # If no English, pick the first available and translate
-        transcript = transcript_list[0]
-        if transcript.is_translatable:
-            print(f"\n✅ Translating {transcript.language} -> English via YouTube")
-            translated = transcript.translate('en').fetch()
-            return translated.to_raw_data()
-        else:
-             # 3️⃣ Use Google Translate as fallback
-            print(f"\n {transcript.language} transcript not translatable via YouTube. Using Google Translate...")
-            fetched = transcript.fetch()
-            translated = []
-            translator = GoogleTranslator(source=transcript.language_code, target='en')
-            for snippet in fetched:
-                translated.append({
-                    'text': translator.translate(snippet.text),
-                    'start': snippet.start,
-                    'duration': snippet.duration
-                })
-            return translated
